@@ -2,12 +2,26 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Subject;
+//use App\Subject;
+use App\Repositories\SubjectRepository as Subject;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiController;
 
-class SubjectController extends Controller
+class SubjectController extends ApiController
 {
+    protected $subject;
+
+    /**
+     * __construct
+     *
+     * @param Subject $subject
+     * @return App\Repositories\SubjectRepository
+     */
+    public function __construct(subject $subject)
+    {
+        $this->subject = $subject;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -15,8 +29,9 @@ class SubjectController extends Controller
      */
     public function index()
     {
-        $subject = Subject::all();
-        return response()->json($subject,200);
+        //$subject = Subject::all();
+        $subject = $this->subject->all();
+        return response()->json(['data' => $subject],200);
     }
 
     /**
@@ -27,18 +42,19 @@ class SubjectController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate([
+        $request->validate([
             'name'=> 'required|string|min:6',
-            'course_id' => 'required|numeric'
+            'subject_id' => 'required|numeric'
         ]);
-        $course = Subject::create($request->all());
-        if(!$subject)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        //$subject = Subject::create($request->all());
+        $subject = $this->subject->create($request->all());
+        if (!$subject) {
+
+            return $this->respondProcessingError();
         }
+
         
-        return response()->json(['message'=>'Subject Updated!!'],200);
+        return $this->respondWithSuccess('Subject Created');
     }
 
     /**
@@ -49,8 +65,12 @@ class SubjectController extends Controller
      */
     public function show($id)
     {
-        $subject = Subject::findOrFail($id);
-        return response()->json($subject);
+        //$subject = Subject::findOrFail($id);
+        $subject = $this->subject->find($id);
+        if (!$subject) {
+            return $this->respondNotFound('Subject does not exist!');
+        }
+        return response()->json(['data' => $subject]);
     }
 
     /**
@@ -62,18 +82,18 @@ class SubjectController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->validate([
+        $request->validate([
             'name'=> 'required|string|min:6',
             'subject_id' => 'required|numeric'
         ]);
-        $subject = Subject::create($request->all());
-        if(!$subject)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        //$subject = Subject::create($request->all());
+        $subject = $this->subject->find($id);
+        if (!$subject) {
+            return $this->respondNotFound('Subject does not exist!');
         }
+        $subject = $this->subject->update($request->all(),$id);
         
-        return response()->json(['message'=>'Subject Updated!!'],200);
+        return $this->respondWithSuccess('Subject Updated');
     }
 
     /**
@@ -84,9 +104,13 @@ class SubjectController extends Controller
      */
     public function destroy($id)
     {
-        $subject = Subject::findOrFail($id);
-        $subject->delete();
-        
-        return response()->json(['message'=>'Subject Deleted'],200);
+        // $subject = Subject::findOrFail($id);
+        // $subject->delete();
+        $subject = $this->subject->find($id);
+        if (!$subject) {
+            return $this->respondNotFound('Subject does not exist!');
+        }
+        $subject = $this->subject->delete($id);
+        return $this->respondWithSuccess('Subject Deleted');
     }
 }

@@ -2,13 +2,28 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Course;
+//use App\Course;
+use App\Http\Controllers\ApiController;
+use App\Repositories\CourseRepository as Course;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
-
-class CourseController extends Controller
+class CourseController extends ApiController
 {
+    
+    protected $course;
+
+    /**
+     * __construct
+     *
+     * @param Course $course
+     * @return App\Repositories\CourseRepository
+     */
+    public function __construct(Course $course)
+    {
+        $this->course = $course;
+    }
+
+    
     /**
      * Display a listing of the resource.
      *
@@ -16,8 +31,9 @@ class CourseController extends Controller
      */
     public function index()
     {
-        $course = Course::orderBy('user_id','desc')->select('id','name')->get();
-        return response()->json($course,200);
+        //$course = Course::orderBy('user_id','desc')->select('id','name')->get();
+        $course = $this->course->all();
+        return response()->json(['data' => $course], 200);
     }
 
     /**
@@ -28,17 +44,16 @@ class CourseController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate([
-            'name' => 'required|string|min:6'
+        $request->validate([
+            'name' => 'required|string|min:6',
         ]);
-        $course = Course::create($request->all());
-        if(!$course)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        $course = $this->course->create($request->all());
+        if (!$course) {
+ 
+            return $this->respondProcessingError();
         }
-        
-        return response()->json(['message'=>'Course Updated!!'],200);
+
+        return $this->respondWithSuccess('Course entry successful');
     }
 
     /**
@@ -49,8 +64,14 @@ class CourseController extends Controller
      */
     public function show($id)
     {
-        $course = Course::findOrFail($id);
-        return response()->json($course);
+        // $course = Course::findOrFail($id);
+        $course = $this->course->find($id);
+        if(!$course){
+            return $this->respondNotFound('Course does not exist!');
+        }
+        return response()->json([
+            'data'=> $course
+        ]);
     }
 
     /**
@@ -62,18 +83,17 @@ class CourseController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->validate([
-            'name' => 'required|string|min:6'
+        $request->validate([
+            'name' => 'required|string|min:6',
         ]);
-        $course = Course::findOrFail($id);
-        $course->update($request->all());
-        if(!$course)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        // $course = Course::findOrFail($id);
+        // $course->update($request->all());
+        $course = $this->course->find($id);
+        if (!$course) {
+            return $this->respondNotFound('Course does not exist!');
         }
-        
-        return response()->json(['message'=>'Course Updated!!'],200);
+        $course = $this->course->update($request->all(),$id);
+        return $this->respondWithSuccess('Course Successfully Updated');
     }
 
     /**
@@ -84,9 +104,11 @@ class CourseController extends Controller
      */
     public function destroy($id)
     {
-        $course = Course::findOrFail($id);
-        $course->delete();
-        
-        return response()->json(['message'=>'Course Deleted'],200);
+        $course = $this->course->find($id);
+        if (!$course) {
+            return $this->respondNotFound('Course does not exist!');
+        }
+        $course = $this->course->delete($id);
+        return $this->respondWithSuccess('Course Deleted');
     }
 }

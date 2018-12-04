@@ -3,11 +3,25 @@
 namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Tutorial;
+use App\Http\Controllers\ApiController;
+use App\Repositories\TutorialRepository as Tutorial;
+//use App\Tutorial;
 
-class TutorialController extends Controller
+class TutorialController extends ApiController
 {
+    protected $tutorial;
+
+    /**
+     * __construct
+     *
+     * @param Tutorial $tutorial
+     * @return App\Repositories\TutorialRepository
+     */
+    public function __construct(Tutorial $tutorial)
+    {
+        $this->tutorial = $tutorial;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -15,8 +29,9 @@ class TutorialController extends Controller
      */
     public function index()
     {
-        $tutorial = Tutorial::orderBy('subject_id','desc')->get();
-        return response()->json($tutorial,200);
+        //$tutorial = Tutorial::orderBy('subject_id','desc')->get();
+        $tutorial = $this->tutorial->paginate(4);
+        return response()->json(['data' => $tutorial],200);
     }
 
     /**
@@ -27,13 +42,17 @@ class TutorialController extends Controller
      */
     public function store(Request $request)
     {
-        $tutorial = Tutorial::create($request->all());
-        if(!$tutorial)
-        { 
-            return response()->json(['message'=>'Error with entries made!'],401);
+        //$tutorial = Tutorial::create($request->all());
+        $request->validate([
+            'content' => 'required|string|min:8',
+            'subject_id' => 'required|numeric'
+        ]);
+        $tutorial = $this->tutorial->create($request->all());
+        if (!$tutorial) {
+            return $this->respondNotFound('Tutorial does not exist!');
         }
         
-        return response()->json(['message'=>'Tutorial Saved!!'],200); 
+        return $this->respondWithSuccess('Tutorial Created!'); 
         
     }
 
@@ -45,8 +64,12 @@ class TutorialController extends Controller
      */
     public function show($id)
     {
-        $tutorial = Tutorial::findOrFail($id);
-        return response()->json($tutorial);
+        //$tutorial = Tutorial::findOrFail($id);
+        $tutorial = $this->tutorial->find($id);
+        if(!$tutorial){
+            return $this->respondNotFound('Tutorial does not exist!');
+        }
+        return response()->json(['data' => $tutorial]);
     }
 
     /**
@@ -58,14 +81,19 @@ class TutorialController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $tutorial = Tutorial::findOrFail($id);
-        $tutorial->update($request->all());
-        if(!$tutorial)
-        { 
-            return response()->json(['message'=>'Error with entries made!'],401);
+        //$tutorial = Tutorial::findOrFail($id);
+        //$tutorial->update($request->all());
+        $request->validate([
+            'content' => 'required|string|min:8',
+            'subject_id' => 'required|numeric'
+        ]);
+        $tutorial = $this->tutorial->find($id);
+        if (!$tutorial) {
+            return $this->respondNotFound('Tutorial does not exist!');
         }
+        $tutorial = $this->tutorial->update($request->all(),$id);
         
-        return response()->json(['message'=>'Tutorial Updated!!'],200); 
+        return $this->respondWithSuccess('Tutorial Updated!'); 
     }
 
     /**
@@ -76,8 +104,13 @@ class TutorialController extends Controller
      */
     public function destroy($id)
     {
-        $tutorial = Tutorial::findOrFail($id);
-        $tutorial->delete();
-        return response()->json(['message'=>'Tutorial Deleted'],200);
+        // $tutorial = Tutorial::findOrFail($id);
+        // $tutorial->delete();
+        $tutorial = $this->tutorial->find($id);
+        if (!$tutorial) {
+            return $this->respondNotFound('Tutorial does not exist!');
+        }
+        $tutorial = $this->tutorial->delete($id);
+        return $this->respondWithSuccess('Tutorial Deleted!');
     }
 }

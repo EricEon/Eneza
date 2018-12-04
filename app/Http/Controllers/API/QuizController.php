@@ -3,11 +3,25 @@
 namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Quiz;
+use App\Http\Controllers\ApiController;
+use App\Repositories\QuizRepository as Quiz;
+//use App\Quiz;
 
-class QuizController extends Controller
+class QuizController extends ApiController
 {
+    protected $quiz;
+
+    /**
+     * __construct
+     *
+     * @param Quiz $quiz
+     * @return App\Repositories\QuizRepository
+     */
+    public function __construct(Quiz $quiz)
+    {
+        $this->quiz = $quiz;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -15,8 +29,9 @@ class QuizController extends Controller
      */
     public function index()
     {
-        $quiz = Quiz::all();
-        return response()->json($quiz,200);
+        //$quiz = Quiz::all();
+        $quiz = $this->quiz->all();
+        return response()->json(['data'=>$quiz],200);
     }
 
     /**
@@ -27,18 +42,19 @@ class QuizController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate([
+        $request->validate([
             'name' => 'required|string|min:6',
             'subject_id' => 'required|numeric'
         ]);
-        $quiz = Quiz::create($request->all());
+        //$quiz = Quiz::create($request->all());
+        $quiz = $this->quiz->create($request->all());
         if(!$quiz)
         { 
             
-            return response()->json(['message'=>'Error with entries made!'],401);
+            return $this->respondProcessingError();
         }
         
-        return response()->json(['message'=>'Quiz Updated!!'],200);
+        return $this->respondWithSuccess('Quiz Created');
     }
 
     /**
@@ -49,8 +65,12 @@ class QuizController extends Controller
      */
     public function show($id)
     {
-        $quiz = Quiz::findOrFail($id);
-        return response()->json($quiz);
+        //$quiz = Quiz::findOrFail($id);
+        $quiz = $this->quiz->find($id);
+        if(!$quiz){
+            return $this->respondNotFound('Quiz does not exist!');
+        }
+        return response()->json(['data' => $quiz]);
     }
 
     /**
@@ -62,19 +82,18 @@ class QuizController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->validate([
+        $request->validate([
             'name' => 'required|string|min:6',
             'subject_id' => 'required|numeric'
         ]);
-        $quiz = Quiz::findOrFail($id);
-        $quiz->update($request->all());
-        if(!$quiz)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        // $quiz = Quiz::findOrFail($id);
+        // $quiz->update($request->all());
+        $quiz = $this->quiz->find($id);
+        if (!$quiz) {
+            return $this->respondNotFound('Quiz does not exist!');
         }
-        
-        return response()->json(['message'=>'Quiz Updated!!'],200);
+        $quiz = $this->quiz->update($request->all(),$id);
+        return $this->respondWithSuccess('Quiz updated');
     }
 
     /**
@@ -85,9 +104,13 @@ class QuizController extends Controller
      */
     public function destroy($id)
     {
-        $quiz = Quiz::findOrFail($id);
-        $quiz->delete();
-        
-        return response()->json(['message'=>'Quiz Deleted'],200);
+        // $quiz = Quiz::findOrFail($id);
+        // $quiz->delete();
+        $quiz = $this->quiz->find($id);
+        if (!$quiz) {
+            return $this->respondNotFound('Quiz does not exist!');
+        }
+        $quiz = $this->quiz->delete($id);
+        return $this->respondWithSuccess('Quiz Deleted');
     }
 }

@@ -3,20 +3,28 @@
 namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Question;
+use App\Http\Controllers\ApiController;
+use App\Repositories\QuestionRepository as Question;
+//use App\Question;
 
-class QuestionController extends Controller
+class QuestionController extends ApiController
 {
+    protected $question;
+
+    public function __construct(Question $question) {
+        $this->question = $question;
+    }
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
+    
     public function index()
     {
-        $question = Question::all();
-        return response()->json($question,200);
+        //$question = Question::all();
+        $question = $this->question->paginate();
+        return response()->json(['data' => $question]);
     }
 
     /**
@@ -27,20 +35,20 @@ class QuestionController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate([
+        $request->validate([
             'content' => 'required|string|min:6',
             'answer' => 'required',
             'quiz_id' => 'required'
         ]);
-        Question::create($request->all());
+        $question = $this->question->create($request->all());
        
         if(!$question)
         { 
             
-            return response()->json(['message'=>'Error with entries made!'],401);
+            return $this->respondProcessingError();
         }
         
-        return response()->json(['message'=>'Question Updated!!'],200);
+        return $this->respondWithSuccess('Question Created');
     }
 
     /**
@@ -51,8 +59,12 @@ class QuestionController extends Controller
      */
     public function show($id)
     {
-        $question = Question::findOrFail($id);
-        return response()->json($question);
+        //$question = Question::findOrFail($id);
+        $question = $this->question->find($id);
+        if(!$question){
+            return $this->respondNotFound('Question does not exist!');
+        }
+        return response()->json(['data' => $question]);
     }
 
     /**
@@ -64,20 +76,19 @@ class QuestionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->validate([
+        $request->validate([
             'content' => 'required|string|min:6',
             'answer' => 'required',
             'quiz_id' => 'required'
         ]);
-        $question = Question::findOrFail($id);
-        $question->update($request->all());
-        if(!$question)
-        { 
-            
-            return response()->json(['message'=>'Error with entries made!'],401);
+        // $question = Question::findOrFail($id);
+        // $question->update($request->all());
+        $question = $this->question->find($id);
+        if (!$question) {
+            return $this->respondNotFound('Question does not exist!');
         }
-        
-        return response()->json(['message'=>'Question Updated!!'],200);
+        $question = $this->question->update($request->all(),$id);
+        return $this->respondWithSuccess('Question Successfully Updated');
     }
 
     /**
@@ -88,9 +99,14 @@ class QuestionController extends Controller
      */
     public function destroy($id)
     {
-        $question = Question::findOrFail($id);
-        $question->delete();
+        // $question = Question::findOrFail($id);
+        // $question->delete();
         
-        return response()->json(['message'=>'Question Deleted'],200);
+        $question = $this->question->find($id);
+        if (!$question) {
+            return $this->respondNotFound('Question does not exist!');
+        }
+        $question = $this->question->delete($id);
+        return $this->respondWithSuccess('Question Deleted');
     }
 }
